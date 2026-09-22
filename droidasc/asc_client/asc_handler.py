@@ -84,11 +84,20 @@ class AscHandler:
         descriptor += dex.get_type(proto.return_type_idx).descriptor
         return ret + descriptor
 
+    # findrefs prints one hit per line; a huge or multi-line string constant
+    # must not flood the output or split a hit across lines
+    _MATCHED_NAME_MAX_LEN = 200
+
     def _format_matched_name(
         self, dex, find_type : str, idx : int, include_descriptor : bool = False,
     ) -> str:
         if find_type == "string":
-            return str(dex.strings[idx])
+            s = str(dex.strings[idx])
+            if len(s) > self._MATCHED_NAME_MAX_LEN:
+                s = s[: self._MATCHED_NAME_MAX_LEN] + "..."
+            if "\n" in s or "\r" in s:
+                s = s.replace("\r", "\\r").replace("\n", "\\n")
+            return s
         if find_type == "type":
             return dex.types[idx].descriptor
         if find_type == "method":

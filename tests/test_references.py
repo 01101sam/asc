@@ -210,6 +210,24 @@ class StringTests(unittest.TestCase):
         self.assertEqual(self.locate(data, 'Ll/'), {0})
 
 
+class MatchedNameFormatTests(unittest.TestCase):
+    def format(self, value):
+        from types import SimpleNamespace
+        from droidasc.asc_client.asc_handler import AscHandler
+        return AscHandler()._format_matched_name(SimpleNamespace(strings=[value]), 'string', 0)
+
+    def test_short_string_is_kept(self):
+        self.assertEqual(self.format('token'), 'token')
+
+    def test_long_string_is_truncated(self):
+        limit = 200
+        self.assertEqual(self.format('a' * limit), 'a' * limit)
+        self.assertEqual(self.format('a' * (limit + 1)), 'a' * limit + '...')
+
+    def test_line_breaks_cannot_split_a_hit(self):
+        self.assertEqual(self.format('a\r\nb'), 'a\\r\\nb')
+
+
 class DependencyTests(unittest.TestCase):
     def test_reference_search_without_site_packages(self):
         import subprocess
