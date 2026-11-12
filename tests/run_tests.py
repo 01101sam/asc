@@ -48,4 +48,10 @@ if __name__ == '__main__':
     if suite.countTestCases() == 0:
         parser.error('selected suite contains no tests')
     result = unittest.TextTestRunner(verbosity=2).run(suite)
-    sys.exit(0 if result.wasSuccessful() and not (args.require_decompiler and result.skipped) else 1)
+    # Strict mode rejects skips, except tests gated on an optional extra
+    # (e.g. the MCP server) which say so in their skip reason.
+    skipped = [
+        item for item in result.skipped
+        if not str(item[1]).startswith('optional dependency:')
+    ]
+    sys.exit(0 if result.wasSuccessful() and not (args.require_decompiler and skipped) else 1)

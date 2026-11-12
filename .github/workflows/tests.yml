@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install -r requirements.txt "mcp>=2.0,<3"
       - name: Install legacy baseline dependencies for performance comparison
         run: python -m pip install -r .performance-base/requirements.txt
       - name: Install virtual display for Tk GUI tests

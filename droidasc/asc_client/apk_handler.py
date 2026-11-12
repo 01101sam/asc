@@ -257,7 +257,7 @@ class ApkHandler:
             mm.close()
             fp.close()
 
-    def for_each_findrefs(self, find_type : str, find : dict):
+    def for_each_findrefs(self, find_type : str, find : dict, aggregate : bool = True):
         # Keep the process-pool import off the getclass startup path.
         from concurrent.futures import ProcessPoolExecutor
         from droidasc.asc_client.apk import worker as _worker
@@ -289,6 +289,7 @@ class ApkHandler:
                     entry,
                     find_type,
                     find,
+                    aggregate,
                 )
                 futures[fut] = entry[0]
 

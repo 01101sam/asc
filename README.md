@@ -162,6 +162,47 @@ to stdout when `-o` is omitted.
 
 You can also use `python main.py` as before — it delegates to the same entry point.
 
+## MCP server
+
+Droid ASC also exposes its read-only APK analysis operations through the Model
+Context Protocol over stdio. The MCP SDK is an optional extra, so install it
+alongside the package:
+
+```bash
+pip install "droidasc[mcp]"
+```
+
+Then register it with Codex using:
+
+```bash
+codex mcp add droidasc -- droidasc-mcp
+```
+
+For clients that use a JSON server configuration, the equivalent entry is:
+
+```json
+{
+  "mcpServers": {
+    "droidasc": {
+      "command": "droidasc-mcp"
+    }
+  }
+}
+```
+
+The server provides `decompile_class`, `list_classes`, `decode_manifest`, and
+`find_references` (string, type, method, field, extends, impl; `aggregate=false`
+returns one line per reference site). Responses are structured and include
+truncation and timing metadata. APK metadata queries use a small cache
+invalidated by file metadata changes; all operations resolve and validate the
+input archive before analysis.
+
+To run it directly from a checkout (with `mcp` installed):
+
+```bash
+python -m droidasc.mcp_server
+```
+
 ## macOS GUI setup
 
 The GUI uses `tkinter`, including Python's native `_tkinter` module and Tcl/Tk.
