@@ -237,7 +237,29 @@ def _run_gui(argv):
     parser.add_argument("--gui-foreground", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
-    if not args.debug and not args.gui_foreground:
+    # Validate the APK before starting the GUI or a detached child process.
+    args.apk_path = os.path.abspath(args.apk_path)
+    if not os.path.isfile(args.apk_path):
+        parser.error(f"APK file not found: {args.apk_path}")
+
+    # Check in the calling process so a missing native Tk module cannot become
+    # an apparently successful launch with no window or diagnostic.
+    try:
+        import tkinter  # noqa: F401
+    except ImportError as e:
+        if e.name not in ("tkinter", "_tkinter"):
+            raise
+        raise RuntimeError(
+            "GUI requires tkinter and its native _tkinter module. "
+            f"Python interpreter: {sys.executable}. "
+            "Use a Python installation with Tcl/Tk support and recreate the virtual "
+            "environment with that interpreter. Installing requirements.txt alone "
+            "does not provide Tk. See README.md: macOS GUI setup."
+        ) from e
+
+    # Keep macOS startup and its event loop in the foreground so initialization
+    # errors are visible and the exit status reflects the actual GUI process.
+    if sys.platform != "darwin" and not args.debug and not args.gui_foreground:
         cmd = [
             sys.executable,
             "-m", "droidasc",
@@ -257,7 +279,7 @@ def _run_gui(argv):
             cmd,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=None,
             close_fds=True,
             creationflags=creationflags,
             start_new_session=start_new_session,
@@ -266,6 +288,14 @@ def _run_gui(argv):
 
     from droidasc.asc_client.gui.app import launch_gui
     launch_gui(args.apk_path, max_workers=args.threads, debug=args.debug)
+
+
+def _exit_with_error(error, debug):
+    print(f"Error: {error}", file=sys.stderr)
+    if debug:
+        import traceback
+        traceback.print_exc()
+    sys.exit(1)
 
 
 def main():
@@ -277,7 +307,10 @@ def main():
         print(_version())
         return
     if "--gui" in argv:
-        _run_gui(argv)
+        try:
+            _run_gui(argv)
+        except Exception as e:
+            _exit_with_error(e, "--debug" in argv)
         return
 
     parser = _build_main_parser(show_version=("-h" in argv or "--help" in argv))
@@ -295,11 +328,7 @@ def main():
         elif args.command == "findrefs":
             _handle_findrefs(args)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
-        if args.debug:
-            import traceback
-            traceback.print_exc()
-        sys.exit(1)
+        _exit_with_error(e, args.debug)
 
 
 def _build_main_parser(show_version=False):

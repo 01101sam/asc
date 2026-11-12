@@ -20,6 +20,9 @@ without site packages, and a large-tail Deflate fixture. It does not open GUI
 windows unless the `gui` suite or the unfiltered `all` suite is selected. The
 GUI suite covers the backend store/search workers, source editing and
 navigation, application layout, package tree, tab bar, dialogs, and themes.
+GUI startup tests (unit suite) cover the `--gui` flag, macOS foreground
+execution, missing Tk diagnostics, debug tracebacks, and relative APK paths in
+detached launches using a stub GUI, so they need neither a display nor Tk.
 On headless Linux, run it under a virtual display:
 
 ```sh
