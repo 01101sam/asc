@@ -58,15 +58,35 @@ class StringLocator(BaseLocator):
         submem = buf[strdata_start: strdata_end]
         pattern = re.compile(pattern_bytes)
         starts = self.starts
-        # offsets = []
-        for match in pattern.finditer(submem):
+        nstarts = len(starts)
+        search = pattern.search
+        limit = len(submem)
+        pos = 0
+        while pos <= limit:
+            match = search(submem, pos)
+            if match is None:
+                return
+            start = strdata_start + match.start()
             # resolve the item that physically holds the match: its start is the
             # greatest item offset not behind the match, regardless of its index
-            pos = bisect_right(starts, strdata_start + match.start()) - 1
-            if pos >= 0:
-                yield starts[pos]
-            # offsets.append(offset + 1) # skip over 00 byte
-        # return offsets
+            i = bisect_right(starts, start) - 1
+            if i < 0:
+                pos = match.start() + 1
+                continue
+            item = starts[i]
+            content = item + read_uleb128_len(buf, item)
+            if start < content:
+                # the hit begins inside the ULEB128 length prefix (e.g. 65 is
+                # encoded as b'A'), which is not string content; retry from the
+                # first content byte so a real hit in the payload is still found
+                pos = content - strdata_start
+                continue
+            yield item
+            # one hit is enough for an item; continue with the next item so a
+            # match running past this item's terminator cannot hide its hit
+            if i + 1 >= nstarts:
+                return
+            pos = max(starts[i + 1] - strdata_start, match.start() + 1)
 
     def locate(self, string : str) -> set:
         t_start = time.perf_counter() if self.debug else None

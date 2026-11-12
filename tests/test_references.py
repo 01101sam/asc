@@ -200,6 +200,26 @@ class StringTests(unittest.TestCase):
         struct.pack_into('<II', data, 56, 0, 0)
         self.assertEqual(self.locate(data, 'token'), set())
 
+    def test_length_prefix_is_not_string_content(self):
+        # uleb128(65) is b'A': the length byte itself must never count as a hit
+        self.assertEqual(self.locate(self.make_strings([b'A' * 65]), 'A'), {0})
+        self.assertEqual(self.locate(self.make_strings([b'B' * 65]), 'A'), set())
+        self.assertEqual(self.locate(self.make_strings([b'x', b'B' * 65]), 'A'), set())
+
+    def test_regex_header_hit_does_not_hide_content_hit(self):
+        self.assertEqual(self.locate(self.make_strings([b'A' * 65]), 'A+'), {0})
+        self.assertEqual(self.locate(self.make_strings([b'B' * 65]), 'A+'), set())
+
+    def test_multibyte_length_and_repeated_hits(self):
+        data = self.make_strings([b'A' * 200 + b'View', b'ViewView'])
+        self.assertEqual(self.locate(data, 'View'), {0, 1})
+
+    def test_match_running_past_terminator_does_not_hide_next_item(self):
+        # 'View.*' is greedy and crosses NUL terminators; the next item's own
+        # hit must still be reported
+        data = self.make_strings([b'View1', b'View2', b'zzz'])
+        self.assertEqual(self.locate(data, 'View.*'), {0, 1})
+
     def test_non_bmp_string_is_searchable(self):
         # the region holds MUTF-8, where a code point above the BMP is stored as a
         # surrogate pair (CESU-8), so a UTF-8 pattern never matches it
